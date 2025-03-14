@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetCareAI - Your AI-Powered Pet Health Assistant</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+        .message {
+            max-width: 80%;
+            margin: 8px;
+            padding: 12px;
+            border-radius: 15px;
+        }
+        .bot-message {
+            background-color: #e3f2fd;
+            margin-right: auto;
+        }
+        .user-message {
+            background-color: #e8f5e9;
+            margin-left: auto;
+        }
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #90a4ae;
+            border-radius: 50%;
+            animation: typing 1s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.3s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="bg-white rounded-t-2xl shadow p-6 mb-4">
+            <div class="flex items-center gap-4">
+                <i class="bi bi-robot text-4xl text-blue-600"></i>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">VetCareAI</h1>
+                    <p class="text-gray-600">Your AI-Powered Pet Health Assistant 🐶🐱</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-white rounded-b-2xl shadow">
+            <div class="chat-container overflow-y-auto p-4" ref="chatContainer">
+                <div v-for="(message, index) in messages" :key="index" 
+                     :class="['message', message.from === 'bot' ? 'bot-message' : 'user-message']">
+                    {{ message.text }}
+                    <div v-if="message.options && message.options.length" class="mt-3 flex flex-wrap gap-2">
+                        <button v-for="option in message.options" 
+                                @click="handleOptionClick(option)"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-full text-sm hover:bg-blue-600 transition">
+                            {{ option }}
+                        </button>
+                    </div>
+                </div>
+                <div v-if="isTyping" class="message bot-message typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 border-t">
+                <div class="flex gap-2">
+                    <input type="text" 
+                           v-model="userInput" 
+                           @keyup.enter="sendMessage"
+                           placeholder="Type your message here..." 
+                           class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:border-blue-500">
+                    <button @click="sendMessage" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    messages: [],
+                    userInput: '',
+                    isTyping: false,
+                    currentState: 'initial',
+                    petDetails: {
+                        type: null,
+                        name: null,
+                        age: null,
+                        symptoms: null
+                    }
+                }
+            },
+            mounted() {
+                this.initializeChat()
+            },
+            methods: {
+                async initializeChat() {
+                    await this.addBotMessage("Hello! I'm VetCareAI, your AI-powered pet health assistant. How can I help you today? 🐾", [
+                        "Check Symptoms",
+                        "Disease Information",
+                        "Book Consultation",
+                        "Emergency Help"
+                    ])
+                },
+                async addBotMessage(text, options = []) {
+                    this.isTyping = true
+                    await new Promise(resolve => setTimeout(resolve, 1000))
+                    this.messages.push({
+                        text,
+                        from: 'bot',
+                        options
+                    })
+                    this.isTyping = false
+                    this.$nextTick(() => {
+                        this.$refs.chatContainer.scrollTop = this.$refs.chatContainer.scrollHeight
+                    })
+                },
+                addUserMessage(text) {
+                    this.messages.push({
+                        text,
+                        from: 'user'
+                    })
+                    this.$nextTick(() => {
+                        this.$refs.chatContainer.scrollTop = this.$refs.chatContainer.scrollHeight
+                    })
+                },
+                async handleOptionClick(option) {
+                    this.addUserMessage(option)
+                    switch(option) {
+                        case "Check Symptoms":
+                            await this.addBotMessage("Is your pet a dog or a cat?", ["Dog", "Cat"])
+                            this.currentState = 'pet-type'
+                            break
+                        case "Disease Information":
+                            await this.addBotMessage("What disease would you like to know more about? (e.g., Parvovirus, Rabies)")
+                            this.currentState = 'disease-info'
+                            break
+                        case "Book Consultation":
+                            await this.addBotMessage("Let's help you book a consultation. What's your pet's name?")
+                            this.currentState = 'booking-name'
+                            break
+                        case "Emergency Help":
+                            await this.addBotMessage("🚨 For immediate emergency care in Mumbai, please contact:\n\nPaw Haven Emergency Clinic, Bandra: +91 XXXXXXXX\nPets & Care 24/7, Andheri: +91 XXXXXXXX\n\nWould you like me to help you with directions?", ["Yes, show directions", "No, thanks"])
+                            break
+                    }
+                },
+                async sendMessage() {
+                    if (!this.userInput.trim()) return
+
+                    const userMessage = this.userInput.trim()
+                    this.addUserMessage(userMessage)
+                    this.userInput = ''
+
+                    // Process user input based on current state
+                    switch(this.currentState) {
+                        case 'pet-type':
+                            this.petDetails.type = userMessage
+                            await this.addBotMessage("What symptoms are you noticing? (e.g., vomiting, coughing, loss of appetite)")
+                            this.currentState = 'symptoms'
+                            break
+                        case 'symptoms':
+                            this.petDetails.symptoms = userMessage
+                            await this.addBotMessage(`Based on the symptoms described for your ${this.petDetails.type}, this could indicate several conditions. I recommend consulting with a vet. Would you like to book a consultation?`, ["Yes, book consultation", "No, thanks"])
+                            break
+                        case 'disease-info':
+                            await this.addBotMessage(`Here's information about ${userMessage}:\n\nThis is a common condition in pets. The main symptoms include changes in appetite, lethargy, and digestive issues. Prevention includes regular vaccinations and check-ups.\n\nWould you like to book a consultation with a vet to discuss this further?`, ["Book Consultation", "Ask Another Question"])
+                            break
+                        case 'booking-name':
+                            this.petDetails.name = userMessage
+                            await this.addBotMessage("Great! What's your pet's age?")
+                            this.currentState = 'booking-age'
+                            break
+                        case 'booking-age':
+                            this.petDetails.age = userMessage
+                            await this.addBotMessage("I've found these available slots at nearby clinics in Mumbai:\n\n1. Dr. Mehta's Pet Clinic, Andheri - Tomorrow 10 AM\n2. Pawfect Care, Bandra - Tomorrow 2 PM\n\nWhich slot would you prefer?", ["10 AM - Andheri", "2 PM - Bandra"])
+                            break
+                        default:
+                            await this.addBotMessage("I'm here to help! What would you like to know?", [
+                                "Check Symptoms",
+                                "Disease Information",
+                                "Book Consultation",
+                                "Emergency Help"
+                            ])
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
